@@ -1173,60 +1173,24 @@ class Client(object):
 
         return str(res)
 
-    def create_order(self, token_buy, token_sell, price, quantity):
+    def create_order(self, token, action, amount, price, base='ETH'):
         """Create a limit order
-
-        :param token_buy: The name or address of the token you will receive as a result of the trade e.g. ETH or '0x7c5a0ce9267ed19b22f8cae653f198e3e8daf098'
-        :type token_buy: string
-        :param token_sell:  The name or address of the token you will lose as a result of the trade e.g. EOS or '0x7c5a0ce9267ed19b22f8cae653f198e3e8daf098'
-        :type token_sell: string
-        :param price:  The price in token_sell you want to purchase the new token for
-        :type price: Decimal, string, int or float
-        :param quantity: The amount of token_buy you will receive when the order is fully filled
-        :type quantity: Decimal, string, int or float
-
-        .. code:: python
-
-            ticker = client.create_order(
-                'EOS',
-                'ETH',
-                '0.000123',
-                '31200.324')
-
-        :returns: API Response
-
-        .. code-block:: python
-
-            {
-                orderNumber: 2101,
-                orderHash: '0x3fe808be7b5df3747e5534056e9ff45ead5b1fcace430d7b4092e5fcd7161e21',
-                price: '0.000129032258064516',
-                amount: '3100',
-                total: '0.4',
-                type: 'buy',
-                params: {
-                    tokenBuy: '0x7c5a0ce9267ed19b22f8cae653f198e3e8daf098',
-                    buyPrecision: 18,
-                    amountBuy: '3100000000000000000000',
-                    tokenSell: '0x0000000000000000000000000000000000000000',
-                    sellPrecision: 18,
-                    amountSell: '400000000000000000',
-                    expires: 100000,
-                    nonce: 1,
-                    user: '0x57b080554ebafc8b17f4a6fd090c18fc8c9188a0'
-                }
-            }
-
-        :raises:  IdexWalletAddressNotFoundException, IdexPrivateKeyNotFoundException, IdexResponseException,  IdexAPIException
-
         """
+        from eth_utils import to_wei
+        assert action in ['buy', 'sell']
+        assert self.get_currency(token).get('decimals') == 18, 'Unsupported token decimals'
 
-        # convert buy and sell amounts based on decimals
-        price = self._num_to_decimal(price)
-        quantity = self._num_to_decimal(quantity)
-        sell_quantity = price * quantity
-        amount_buy = self.convert_to_currency_quantity(token_buy, quantity)
-        amount_sell = self.convert_to_currency_quantity(token_sell, sell_quantity)
+        if action == 'buy':
+            token_buy = token
+            token_sell = base
+            amount_buy = str(to_wei(amount, 'ether'))
+            amount_sell = str(to_wei(price*amount, 'ether'))
+
+        if action == 'sell':
+            token_buy = base
+            token_sell = token
+            amount_buy = str(to_wei(price*amount, 'ether'))
+            amount_sell = str(to_wei(amount, 'ether'))
 
         return self.create_order_wei(token_buy, token_sell, amount_buy, amount_sell)
 
