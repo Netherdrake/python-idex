@@ -3,14 +3,14 @@ from setuptools import setup
 
 setup(
     name='python-idex',
-    version='0.2.8',
+    version='0.3.0',
     packages=['idex'],
     description='IDEX REST API python implementation',
     url='https://github.com/sammchardy/python-idex',
     author='Sam McHardy',
     license='MIT',
     author_email='',
-    install_requires=['requests', 'ethereum'],
+    install_requires=['requests', 'web3'],
     keywords='idex exchange rest api ethereum eth eos',
     classifiers=[
           'Intended Audience :: Developers',

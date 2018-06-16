@@ -7,7 +7,6 @@ import requests
 import time
 
 from decimal import Decimal
-from ethereum.utils import sha3, ecsign, encode_int32
 
 from .exceptions import IdexException, IdexWalletAddressNotFoundException, IdexPrivateKeyNotFoundException, IdexAPIException, IdexRequestException, IdexCurrencyNotFoundException
 
@@ -70,6 +69,8 @@ class Client(object):
         """Generate v, r, s values from payload
 
         """
+        from web3.auto import w3
+        from eth_utils import decode_hex, keccak
 
         # pack parameters based on type
         sig_str = b''
@@ -80,20 +81,25 @@ class Client(object):
                 val = val[2:].encode('utf-8')
             elif d[2] == 'uint256':
                 # encode, pad and convert to bytes
-                val = binascii.b2a_hex(encode_int32(int(d[1])))
+                val = binascii.b2a_hex(int(d[1]).to_bytes(32, byteorder='big'))
             sig_str += val
 
         # hash the packed string
-        rawhash = sha3(codecs.decode(sig_str, 'hex_codec'))
+        # message_hash = defunct_hash_message(sig_str)
+        message_hash = keccak(
+            u"\x19Ethereum Signed Message:\n32".encode('utf-8') + \
+            keccak(codecs.decode(sig_str, 'hex_codec'))
+        )
 
-        # salt the hashed packed string
-        salted = sha3(u"\x19Ethereum Signed Message:\n32".encode('utf-8') + rawhash)
-
-        # sign string
-        v, r, s = ecsign(salted, codecs.decode(self._private_key[2:], 'hex_codec'))
-
-        # pad r and s with 0 to 64 places
-        return {'v': v, 'r': "{0:#0{1}x}".format(r, 66), 's': "{0:#0{1}x}".format(s, 66)}
+        signed = w3.eth.account.signHash(
+            message_hash,
+            private_key=self._private_key[2:]
+        )
+        return {
+            'v': signed['v'],
+            'r': "{0:#0{1}x}".format(signed['r'], 66),
+            's': "{0:#0{1}x}".format(signed['s'], 66),
+        }
 
     def _create_uri(self, path):
         return '{}/{}'.format(self.API_URL, path)
